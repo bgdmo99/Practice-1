@@ -1,0 +1,102 @@
+#Alberto García de Mendoza Ortega
+#Kevin Carlos Díaz de Sandi Muñoz
+
+.data
+
+
+.text
+addi $s0, $zero, 8 # Number of discs
+addi $s1, $zero, 0x1001 # High part from first direction
+sll $s1, $s1, 16
+addi $s2, $s1, 0x20
+addi $s3, $s1, 0x40
+
+add $t0, $zero, $s0
+add $t1, $zero, $s1
+addi $t5, $zero, 1 # registro que guarda 1
+
+cycle:
+sw $t0, 0($t1)
+addi $t0, $t0, -1
+addi $t1, $t1, 4
+bne $t0, $zero, cycle 
+
+add $t0, $zero, $t1 # direccion incicial mas tamaño
+sw $t0, 0x80($s1)
+sw $s2, 0x80($s2)
+sw $s3, 0x80($s3)
+
+add $a0, $zero, $s0 # n
+add $a1, $zero, $s1 # torre A
+add $a2, $zero, $s3 # torre C
+add $a3, $zero, $s2 # torre B
+
+jal hanoi
+
+j exit
+
+hanoi:			#	n, ori, dest, aux
+
+bne $a0, $t5, sec_case
+	lw $t0, 0x80($a1)
+	lw $t1, -4($t0)
+	sw $zero, -4($t0)
+	addi $t0, $t0, -4
+	sw $t0, 0x80($a1)
+	lw $t0, 0x80($a2)
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t0, 0x80($a2)
+	jr $ra
+
+sec_case:
+	addi $sp, $sp, -12
+	sw $ra, 0($sp)
+	sw $a2, 4($sp)
+	sw $a3, 8($sp)
+	#sw $a1, 12($sp)	
+	
+	addi $a0, $a0, -1	# CAMBIOS DE DATOS A ENVIAR
+	add $t0, $zero, $a2
+	add $a2, $zero, $a3
+	add $a3, $zero, $t0
+
+	jal hanoi
+	
+	lw $ra, 0($sp)
+	lw $a2, 4($sp)
+	lw $a3, 8($sp)
+	#lw $a1, 12($sp)
+	addi $sp, $sp, 12	
+			
+	lw $t0, 0x80($a1)
+	lw $t1, -4($t0)
+	sw $zero, -4($t0)
+	addi $t0, $t0, -4
+	sw $t0, 0x80($a1)
+	lw $t0, 0x80($a2)
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t0, 0x80($a2)
+	
+	addi $sp, $sp, -12
+	sw $ra, 0($sp)
+	sw $a1, 4($sp)
+	sw $a3, 8($sp)
+	#sw $a2, 12($sp)
+	
+	add $t0, $zero, $a1
+	add $a1, $zero, $a3
+	add $a3, $zero, $t0
+	
+	jal hanoi
+	
+	addi $a0, $a0, 1
+	lw $ra, 0($sp)
+	lw $a1, 4($sp)
+	lw $a3, 8($sp)
+	addi $sp, $sp, 12
+	
+	jr $ra
+exit:
+
