@@ -4,94 +4,107 @@
 .data
 
 .text
-addi $s0, $zero, 8 				# Number of discs
+addi $s0, $zero, 8 			# Number of discs
 
-addi $s1, $zero, 0x1001	 			
-sll $s1, $s1, 16
-addi $s2, $s1, 0x20
-addi $s3, $s1, 0x40
+# Set initial adress of each tower
+addi $s1, $zero, 0x1001	 		# SFor tower 1: set the high part of the address in the low part	
+sll $s1, $s1, 16			# Shift low part 16 bits to adjust it to the high part
+addi $s2, $s1, 0x20			# Set the tower 2 initial address to the tower 1 adress plus 20H bytes (8x4 memory spaces for each tower)
+addi $s3, $s1, 0x40			# Set the tower 3 initial address to the tower 1 adress plus 40H bytes 
 
-add $t0, $zero, $s0
-add $t1, $zero, $s1
+add $t0, $zero, $s0			# Temp variable to insert disks in the initial tower
+add $t1, $zero, $s1			# Temp variable to point to the address where disks will be located, starting in the tower 1 initial address	
 
-cycle:
-sw $t0, 0($t1)
-addi $t0, $t0, -1
-addi $t1, $t1, 4
-bne $t0, $zero, cycle 
+pileDisks:
+sw $t0, 0($t1)				# Store the corresponding disk in its respective address		
+addi $t0, $t0, -1			# Decrement disk number on 1 
+addi $t1, $t1, 4			# Increment address in 1 memory space (4 bytes)	
+bne $t0, $zero, pileDisks 		# If we aren´t out of disks, keep piling disks 
 
-sw $t1, 0x80($s1)
-sw $s2, 0x80($s2)
-sw $s3, 0x80($s3)
+# Save the first empty address at 0x80 directions from the initial address of each tower 
+sw $t1, 0x80($s1)				# t1 because it was the last address incrmeented when piling the disks
+sw $s2, 0x80($s2)				# For tower 2 it's zero because it starts empty
+sw $s3, 0x80($s3)				# For tower 3 it's zero because it starts empty
 
-add $a0, $zero, $s0 				# n
-add $a1, $zero, $s1 				# torre A
-add $a2, $zero, $s3 				# torre C
-add $a3, $zero, $s2 				# torre B
+# Set input values for the Hanoi function
+add $a0, $zero, $s0 				# $a0 stores the number of disks
+add $a1, $zero, $s1 				# $a1 stores the initial address of the origin tower (tower 1)
+add $a2, $zero, $s3 				# $a2 stores the initial address of the destination tower (tower 3)
+add $a3, $zero, $s2 				# $3 stores the initial address of the auxiliary tower (tower 2)
 
-addi $t5, $zero, 1 				# registro que guarda 1
+addi $t5, $zero, 1 				# Register that will store a constant 1 for general purpose 
 
-jal hanoi
+jal hanoi					# Call the function Hanoi storing the return address
 
-j exit
+j exit						# End the code
 
-hanoi:						#	n, ori, dest, aux
+hanoi:	# $a0 = n, $a1 = org, $a2 = dest, $a3 = aux
 
-bne $a0, $t5, sec_case
-	lw $t0, 0x80($a1)
-	lw $t1, -4($t0)
-	sw $zero, -4($t0)
-	addi $t0, $t0, -4
-	sw $t0, 0x80($a1)
-	lw $t0, 0x80($a2)
-	sw $t1, 0($t0)
-	addi $t0, $t0, 4
-	sw $t0, 0x80($a2)
-	jr $ra
+# Base case
+bne $a0, $t5, sec_case			# If the number of disks isn't 1 jump to the secondary case
+	lw $t0, 0x80($a1)		# Load in $t0 the first empty address of the org tower (which is 0x80 spaces from the initial address)
+	lw $t1, -4($t0)			# Load in $t1 the top disk  of the tower, which is 1 memory space (4 bytes) from the first empty space of the tower
+	sw $zero, -4($t0)		# Remove given value from the tower (set to 0)
+	addi $t0, $t0, -4		# Reduce in 1 memory space (4) the first empty address of the org tower
+	sw $t0, 0x80($a1)		# Replace the new value for the first empty address of the tower
+	lw $t0, 0x80($a2)		# Load in $t0 the first empty address of the dest tower (which is 0x80 spaces from the initial address)
+	sw $t1, 0($t0)			# Store the previoulsy extracted disk from the org tower in the first empty space of the destination tower
+	addi $t0, $t0, 4		# Increment in 1 memory space (4) the destination tower first empty address
+	sw $t0, 0x80($a2)		# Replace the new value for the first empty address of the dest tower
+	jr $ra				# Return to the last PC address
 
 sec_case:
-	addi $sp, $sp, -12
-	sw $ra, 0($sp)
-	sw $a2, 4($sp)
-	sw $a3, 8($sp)	
+	addi $sp, $sp, -12		# Save 3 memory spaces in the SP (3x4 = 12)
+	sw $ra, 0($sp)			# Store in the fist space the PC return value
+	sw $a2, 4($sp)			# Store in the second space the Aux tower value
+	sw $a3, 8($sp)			# Store in the third space the aux tower value
+	# We don't store anything else because either we know their return values or this aren't changed in the function
 	
-	addi $a0, $a0, -1			# CAMBIOS DE DATOS A ENVIAR
-	add $t0, $zero, $a2
-	add $a2, $zero, $a3
-	add $a3, $zero, $t0
-
-	jal hanoi
+	# Set input values for the Hanoi function
+	addi $a0, $a0, -1		# Assign N to N-1
+	add $t0, $zero, $a2		# Save the dest address because it will be erased
+	add $a2, $zero, $a3		# Reeplace the destination address with the auxiliary address
+	add $a3, $zero, $t0		# Set the auxiliary address to the destination address
+	# Note that the origin address remains the same
 	
-	lw $ra, 0($sp)
-	lw $a2, 4($sp)
-	lw $a3, 8($sp)
+	jal hanoi			# Call function with given input values
+	
+	# Restore previous values before calling the function
+	lw $ra, 0($sp)			# Restore $ra
+	lw $a2, 4($sp)			# Restore destination address
+	lw $a3, 8($sp)			# Restore auxiliary address
+	#Notice we don't restore the SP to it's original size scince we will need this spaces again soon
 			
-	lw $t0, 0x80($a1)
-	lw $t1, -4($t0)
-	sw $zero, -4($t0)
-	addi $t0, $t0, -4
-	sw $t0, 0x80($a1)
-	lw $t0, 0x80($a2)
-	sw $t1, 0($t0)
-	addi $t0, $t0, 4
-	sw $t0, 0x80($a2)
+	lw $t0, 0x80($a1)		# Load in $t0 the first empty address of the org tower (which is 0x80 spaces from the initial address)
+	lw $t1, -4($t0)			# Load in $t1 the top disk  of the tower, which is 1 memory space (4 bytes) from the first empty space of the tower
+	sw $zero, -4($t0)		# Remove given value from the tower (set to 0)
+	addi $t0, $t0, -4		# Reduce in 1 memory space (4) the first empty address of the org tower
+	sw $t0, 0x80($a1)		# Replace the new value for the first empty address of the tower
+	lw $t0, 0x80($a2)		# Load in $t0 the first empty address of the dest tower (which is 0x80 spaces from the initial address)
+	sw $t1, 0($t0)			# Store the previoulsy extracted disk from the org tower in the first empty space of the destination tower
+	addi $t0, $t0, 4		#Increment in 1 memory space (4) the destination tower first empty address
+	sw $t0, 0x80($a2)		# Replace the new value for the first empty address of the dest tower
 	
-	sw $ra, 0($sp)
-	sw $a1, 4($sp)
-	sw $a3, 8($sp)
+	# In the 3 previously saved spaces in the SP save the requiered values
+	sw $ra, 0($sp)			# Save the PC return value
+	sw $a1, 4($sp)			# Save the org address	
+	sw $a3, 8($sp)			# Save the aux address	
 	
-	add $t0, $zero, $a1
-	add $a1, $zero, $a3
-	add $a3, $zero, $t0
+	# Set input values for the Hanoi function
+	add $t0, $zero, $a1		# Save the org address because it will be erased
+	add $a1, $zero, $a3		# Reeplace the org address with the aux address
+	add $a3, $zero, $t0		# Set the aux address to the org address
+	#Note that n remains as n-1, scince it hasn't been changed, and that dest address remains the same
 	
-	jal hanoi
+	jal hanoi			# Call function with given input values
 	
-	addi $a0, $a0, 1
-	lw $ra, 0($sp)
-	lw $a1, 4($sp)
-	lw $a3, 8($sp)
-	addi $sp, $sp, 12
+	#once returned from function restore all values
+	addi $a0, $a0, 1		# Restore n, which was changed to n-1, by adding 1
+	lw $ra, 0($sp)			# Restore the return address for the PC
+	lw $a1, 4($sp)			# Restore the org address
+	lw $a3, 8($sp)			# Restore the aux address
+	addi $sp, $sp, 12		# Restore the SP to it's size
 	
-	jr $ra
+	jr $ra				# Go to the return address
 exit:
 
