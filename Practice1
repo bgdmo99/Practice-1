@@ -1,5 +1,5 @@
-#Alberto García de Mendoza Ortega
-#Kevin Carlos Díaz de Sandi Muñoz
+#Alberto GarcÃ­a de Mendoza Ortega
+#Kevin Carlos DÃ­az de Sandi MuÃ±oz
 
 .data
 
@@ -9,28 +9,28 @@ addi $s0, $zero, 8 			# Number of discs
 # Set initial adress of each tower
 addi $s1, $zero, 0x1001	 		# SFor tower 1: set the high part of the address in the low part	
 sll $s1, $s1, 16			# Shift low part 16 bits to adjust it to the high part
-addi $s2, $s1, 0x20			# Set the tower 2 initial address to the tower 1 adress plus 20H bytes (8x4 memory spaces for each tower)
-addi $s3, $s1, 0x40			# Set the tower 3 initial address to the tower 1 adress plus 40H bytes 
+addi $s2, $s1, 0x20			# Set the tower B initial address to the tower A adress plus 20H bytes (8x4 memory spaces for each tower)
+addi $s3, $s1, 0x40			# Set the tower C initial address to the tower A adress plus 40H bytes 
 
 add $t0, $zero, $s0			# Temp variable to insert disks in the initial tower
-add $t1, $zero, $s1			# Temp variable to point to the address where disks will be located, starting in the tower 1 initial address	
+add $t1, $zero, $s1			# Temp variable to point to the address where disks will be located, starting in the tower A initial address	
 
 pileDisks:
 sw $t0, 0($t1)				# Store the corresponding disk in its respective address		
 addi $t0, $t0, -1			# Decrement disk number on 1 
 addi $t1, $t1, 4			# Increment address in 1 memory space (4 bytes)	
-bne $t0, $zero, pileDisks 		# If we aren´t out of disks, keep piling disks 
+bne $t0, $zero, pileDisks 		# If we arenÂ´t out of disks, keep piling disks 
 
 # Save the first empty address at 0x80 directions from the initial address of each tower 
 sw $t1, 0x80($s1)				# t1 because it was the last address incrmeented when piling the disks
-sw $s2, 0x80($s2)				# For tower 2 it's zero because it starts empty
-sw $s3, 0x80($s3)				# For tower 3 it's zero because it starts empty
+sw $s2, 0x80($s2)				# For tower B it's zero because it starts empty
+sw $s3, 0x80($s3)				# For tower C it's zero because it starts empty
 
 # Set input values for the Hanoi function
 add $a0, $zero, $s0 				# $a0 stores the number of disks
-add $a1, $zero, $s1 				# $a1 stores the initial address of the origin tower (tower 1)
-add $a2, $zero, $s3 				# $a2 stores the initial address of the destination tower (tower 3)
-add $a3, $zero, $s2 				# $3 stores the initial address of the auxiliary tower (tower 2)
+add $a1, $zero, $s1 				# $a1 stores the initial address of the origin tower (tower A)
+add $a2, $zero, $s3 				# $a2 stores the initial address of the destination tower (tower C)
+add $a3, $zero, $s2 				# $a3 stores the initial address of the auxiliary tower (tower B)
 
 addi $t5, $zero, 1 				# Register that will store a constant 1 for general purpose 
 
@@ -56,7 +56,7 @@ bne $a0, $t5, sec_case			# If the number of disks isn't 1 jump to the secondary 
 sec_case:
 	addi $sp, $sp, -12		# Save 3 memory spaces in the SP (3x4 = 12)
 	sw $ra, 0($sp)			# Store in the fist space the PC return value
-	sw $a2, 4($sp)			# Store in the second space the Aux tower value
+	sw $a2, 4($sp)			# Store in the second space the destination tower value
 	sw $a3, 8($sp)			# Store in the third space the aux tower value
 	# We don't store anything else because either we know their return values or this aren't changed in the function
 	
